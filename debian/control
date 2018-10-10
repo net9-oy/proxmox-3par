@@ -1,0 +1,14 @@
+Source: proxmox-3par
+Maintainer: Net9 Oy <admin@net9.fi>
+Uploaders: Teemu Grönqvist <teemu.gronqvist@net9.fi>
+Section: perl
+Priority: optional
+Build-Depends: debhelper (>= 9)
+Standards-Version: 3.9.6
+
+Package: proxmox-3par
+Architecture: all
+Depends: libjson-perl,
+         ${misc:Depends},
+         ${perl:Depends}
+Description: HPE 3par driver for Proxmox

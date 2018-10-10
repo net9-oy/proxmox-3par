@@ -1,0 +1,5 @@
+proxmox-3par (1.0-0) experimental; urgency=medium
+
+  * proxmox-3par: initial release
+
+ -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Wed, 10 Oct 2018 17:01:11 +0100

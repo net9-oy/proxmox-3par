@@ -96,17 +96,6 @@ sub options {
     };
 }
 
-sub register {
-    my ($class) = @_;
-
-    # Make no duplicate checks: we overwrite DRBD module
-    my $type = $class->type();
-    my $pdata = $class->private();
-    my $plugindata = $class->plugindata();
-    $pdata->{plugindata}->{$type} = $plugindata;
-    $pdata->{plugins}->{$type} = $class;
-}
-
 sub volume_status {
     my ($class, $scfg, $name) = @_;
 

@@ -1,3 +1,11 @@
+proxmox-3par (2.0-1) experimental; urgency=medium
+
+  * added resizing devices and maps on resize
+  * updated labels
+  * changed virtual volume naming format
+
+ -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Thu, 11 Oct 2018 18:05:09 +0100
+
 proxmox-3par (1.0-0) experimental; urgency=medium
 
   * proxmox-3par: initial release

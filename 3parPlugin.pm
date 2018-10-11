@@ -76,7 +76,6 @@ sub options {
         cpg                => { fixed    => 1 },
         user               => { fixed    => 1 },
         address            => { fixed    => 1 },
-        cluster_identifier => { fixed    => 1 },
         snapshot_expiry    => { optional => 1 },
         host               => { fixed    => 1 },
         startvlun          => { fixed    => 1 },

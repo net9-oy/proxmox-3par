@@ -13,8 +13,6 @@ use PVE::JSONSchema qw(get_standard_option);
 
 use base qw(PVE::Storage::Plugin);
 
-
-
 sub api {
     return 1;
 }
@@ -165,22 +163,6 @@ sub filesystem_path {
 
     my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname));
     my $path = "/dev/mapper/3" . lc $volume_status->{wwid} if $volume_status;
-
-
-=pod
-    my @glob = glob("/sys/class/block/dm-*/slaves/sd?/device/wwid");
-    my $path = undef;
-
-    foreach my $file (@glob) {
-        open my $fh, "<", $file or die "unable to open wwid file\n";
-        my $line = <$fh>;
-        close $fh;
-        if ($volume_status && $volume_status->{wwid} =~ m/$line/) {
-            $path = "/dev/$1" if $file =~ m#^/sys/class/block/(dm-\d+)#;
-            last;
-        }
-    }
-=cut
 
     return wantarray ? ($path, $vmid, $vtype) : $path;
 }
@@ -398,22 +380,7 @@ sub volume_export_formats {
 sub volume_export {
     my ($class, $scfg, $storeid, $fh, $volname, $format, $snapshot, $base_snapshot, $with_snapshots) = @_;
 
-    die "volume export format $format not available for $class\n"
-        if $format ne 'raw+size';
-    die "cannot export volumes together with their snapshots in $class\n"
-        if $with_snapshots;
-    die "cannot export a snapshot in $class\n" if defined($snapshot);
-    die "cannot export an incremental stream in $class\n" if defined($base_snapshot);
-    my $file = $class->path($scfg, $volname, $storeid);
-    my $size;
-    # should be faster than querying LVM, also checks for the device file's availability
-    run_command(['/sbin/blockdev', '--getsize64', $file], outfunc => sub {
-        my ($line) = @_;
-        die "unexpected output from /sbin/blockdev: $line\n" if $line !~ /^(\d+)$/;
-        $size = int($1);
-    });
-    PVE::Storage::Plugin::write_common_header($fh, $size);
-    run_command(['dd', "if=$file", "bs=64k"], output => '>&'.fileno($fh));
+    die "Not implemented\n";
 }
 
 sub volume_import {

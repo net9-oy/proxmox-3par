@@ -364,7 +364,7 @@ sub volume_snapshot {
     push @$cmd, '-exp', $scfg->{snapshot_expiry} if $scfg->{snapshot_expiry};
     push @$cmd, "${vv}_{$snap}", $vv;
 
-    run_command($cmd, errmsg => "unable to create snapshot of virtual volume");
+    run_command($cmd, errmsg => "unable to create snapshot of virtual volume\n");
 }
 
 sub volume_snapshot_rollback {
@@ -373,7 +373,7 @@ sub volume_snapshot_rollback {
     my $vv = $scfg->{cluster_identifier} . "_${volname}_{$snap}";
     my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'promotesv', $vv];
 
-    run_command($cmd, errmsg => "unable to rollback snapshot");
+    run_command($cmd, errmsg => "unable to rollback snapshot\n");
 }
 
 sub volume_snapshot_delete {

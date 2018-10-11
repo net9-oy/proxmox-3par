@@ -145,6 +145,16 @@ sub rescan_vol {
     }
 }
 
+sub resize_map {
+    my ($class, $scfg, $volname) = @_;
+
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname))
+        or die "volume is not activated; unable to resize map\n";
+
+    run_command(['multipathd', 'resize', 'map', lc "3$volume_status->{wwid}"],
+        errmsg => "unable to resize multipath map\n");
+}
+
 sub parse_volname {
     my ($class, $volname) = @_;
 
@@ -341,6 +351,7 @@ sub volume_resize {
     run_command($cmd, errmsg => "error resizing volume\n");
 
     $class->rescan_vol($scfg, $volname);
+    $class->resize_map($scfg, $volname);
 
     return 1;
 }

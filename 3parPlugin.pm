@@ -44,10 +44,6 @@ sub properties {
             description => "Volume group name.",
             type => 'string',
         },
-        cluster_identifier => {
-            description => "Volume group name.",
-            type => 'string',
-        },
         snapshot_expiry => {
             description => "Volume group name.",
             type => 'string',
@@ -117,16 +113,16 @@ sub volume_status {
 }
 
 sub volume_name {
-    my ($class, $scfg, $volname, $snapname) = @_;
+    my ($class, $volname, $snapname) = @_;
 
-    return $scfg->{cluster_identifier} . "_" . $volname . ($snapname ? "_$snapname" : "");
+    return $volname . ($snapname ? "_$snapname" : "");
 }
 
 sub rescan_vol {
     my ($class, $scfg, $volname, $snapname) = @_;
 
     # We return and don't give an error, as the volume is not activated (and will be scanned when activated)
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname))
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($volname, $snapname))
         or return;
 
     my @glob = glob("/sys/class/block/dm-*/slaves/sd?/device/wwid");
@@ -148,7 +144,7 @@ sub rescan_vol {
 sub resize_map {
     my ($class, $scfg, $volname) = @_;
 
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname))
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($volname))
         or die "volume is not activated; unable to resize map\n";
 
     run_command(['multipathd', 'resize', 'map', lc "3$volume_status->{wwid}"],
@@ -171,7 +167,7 @@ sub filesystem_path {
 
     $class->activate_volume(undef, $scfg, $volname, $snapname);
 
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname));
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($volname, $snapname));
     my $path = "/dev/mapper/3" . lc $volume_status->{wwid} if $volume_status;
 
     return wantarray ? ($path, $vmid, $vtype) : $path;
@@ -197,13 +193,13 @@ sub activate_volume {
     my ($class, $storeid, $scfg, $volname, $snapname, $cache) = @_;
 
     my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'createvlun', '-novcn', '-f',
-        $class->volume_name($scfg, $volname, $snapname), $scfg->{startvlun} . "+", $scfg->{host}];
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname));
+        $class->volume_name($volname, $snapname), $scfg->{startvlun} . "+", $scfg->{host}];
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($volname, $snapname));
 
     run_command($cmd, errmsg => "failure creating vlun\n")
         if !$volume_status;
 
-    $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname));
+    $volume_status = $class->volume_status($scfg, $class->volume_name($volname, $snapname));
 
     my @glob = glob("/sys/class/scsi_host/host*/scan");
 
@@ -222,7 +218,7 @@ sub activate_volume {
 sub deactivate_volume {
     my ($class, $storeid, $scfg, $volname, $snapname, $cache) = @_;
 
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname));
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($volname, $snapname));
 
     die "vlun for $volname not found. please perform cleanup manually\n" if !$volume_status;
 
@@ -250,7 +246,7 @@ sub deactivate_volume {
     }
 
     $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'removevlun', '-f',
-        $class->volume_name($scfg, $volname, $snapname), $volume_status->{lun}, $scfg->{host}];
+        $class->volume_name($volname, $snapname), $volume_status->{lun}, $scfg->{host}];
 
     run_command($cmd, errmsg => "unable to remove virtual lun\n");
 }
@@ -267,7 +263,7 @@ sub alloc_image {
     push @$cmd, '-compr' if $scfg->{use_compr};
     push @$cmd, '-tdvv' if $scfg->{use_dedup};
     push @$cmd, '-tpvv' if $scfg->{use_thin} && !$scfg->{use_dedup};
-    push @$cmd, '-snp_cpg', $scfg->{cpg}, $scfg->{cpg}, $class->volume_name($scfg, $name), $size / 1024 / 1024 . "g";
+    push @$cmd, '-snp_cpg', $scfg->{cpg}, $scfg->{cpg}, $class->volume_name($name), $size / 1024 / 1024 . "g";
 
     run_command($cmd, errmsg => "failure creating virtual volume\n");
 
@@ -275,13 +271,13 @@ sub alloc_image {
 }
 
 sub free_image {
-    my ($class, $storeid, $scfg, $volname, $isBase) = @_;
+    my ($class, $storeid, $scfg, $volname, $isBase, $snapname) = @_;
 
     $class->deactivate_volume($storeid, $scfg, $volname)
-        if $class->volume_status($scfg, $class->volume_name($scfg, $volname));
+        if $class->volume_status($scfg, $class->volume_name($volname, $snapname));
 
     my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'removevv', '-f',
-        $class->volume_name($scfg, $volname)];
+        $class->volume_name($volname, $snapname)];
 
     run_command($cmd, errmsg => "unable to remove virtual volume\n");
 }
@@ -352,8 +348,6 @@ sub volume_resize {
 
     $class->rescan_vol($scfg, $volname);
     $class->resize_map($scfg, $volname);
-
-    return 1;
 }
 
 sub volume_snapshot {
@@ -370,8 +364,8 @@ sub volume_snapshot {
 sub volume_snapshot_rollback {
     my ($class, $scfg, $storeid, $volname, $snap) = @_;
 
-    my $vv = $scfg->{cluster_identifier} . "_${volname}_{$snap}";
-    my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'promotesv', $vv];
+    my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'promotesv',
+        $class->volume_name($volname, $snap)];
 
     run_command($cmd, errmsg => "unable to rollback snapshot\n");
 }
@@ -379,7 +373,7 @@ sub volume_snapshot_rollback {
 sub volume_snapshot_delete {
     my ($class, $scfg, $storeid, $volname, $snap) = @_;
 
-    $class->free_image($storeid, $scfg, "${volname}_{$snap}");
+    $class->free_image($storeid, $scfg, $volname, undef, $snap);
 }
 
 sub volume_export_formats {

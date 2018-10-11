@@ -37,40 +37,36 @@ sub properties {
             type => 'string',
         },
         user => {
-            description => "Volume group name.",
+            description => "SSH user for 3par",
             type => 'string',
         },
         address => {
-            description => "Volume group name.",
+            description => "IP address or hostname for 3par",
             type => 'string',
         },
         snapshot_expiry => {
-            description => "Volume group name.",
+            description => "Expiry of snapshots in 3par specified unit format",
             type => 'string',
         },
         host => {
-            description => "Volume group name.",
+            description => "Hostname of this in the 3par host definition",
             type => 'string',
         },
         startvlun => {
-            description => "Volume group name.",
+            description => "VLUN numbering starting value",
             type => 'integer',
         },
         use_dedup => {
-            description => "Volume group name.",
+            description => "Toggle deduplication on or off",
             type => 'boolean',
         },
         use_thin => {
-            description => "Volume group name.",
+            description => "Toggle thin provisioning on or off",
             type => 'boolean',
         },
         use_compr => {
-            description => "Volume group name.",
+            description => "Toggle compression on or off",
             type => 'boolean',
-        },
-        snapshot_expiry => {
-            description => "Volume group name.",
-            type => 'string',
         },
     };
 }
@@ -106,8 +102,6 @@ sub volume_status {
 
         $correct = { 'vv' => $vv, 'lun' => $lun, 'wwid' => $wwid } if $host eq $scfg->{host};
     });
-
-    #die "no wwid found for volume\n" if !$correct;
 
     return $correct;
 }

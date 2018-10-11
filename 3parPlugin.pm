@@ -124,6 +124,29 @@ sub volume_name {
     return $scfg->{cluster_identifier} . "_" . $volname . ($snapname ? "_$snapname" : "");
 }
 
+sub rescan_vol {
+    my ($class, $scfg, $volname, $snapname) = @_;
+
+    # We return and don't give an error, as the volume is not activated (and will be scanned when activated)
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg, $volname, $snapname))
+        or return;
+
+    my @glob = glob("/sys/class/block/dm-*/slaves/sd?/device/wwid");
+
+    foreach my $file (@glob) {
+        open my $fh, "<", $file or die "unable to open wwid file\n";
+        my $line = <$fh> or die "unable to read wwid file\n";
+        close $fh;
+
+        next if $line !=~ m/$volume_status->{wwid}/;
+        next if $file !~  m#(/sys/class/block/dm-\d+/slaves/sd\w/device)/wwid#;
+
+        open(my $output, ">", "$1/rescan") or die "unable to open SCSI rescan file\n";
+        print($output, "1") or die "unable to write to SCSI rescan file\n";
+        close $output;
+    }
+}
+
 sub parse_volname {
     my ($class, $volname) = @_;
 
@@ -334,6 +357,8 @@ sub volume_resize {
         $scfg->{cluster_identifier} . "_" . $volname, $size - $cur->{size}];
 
     run_command($cmd, errmsg => "error resizing volume\n");
+
+    $class->rescan_vol($scfg, $volname);
 
     return 1;
 }

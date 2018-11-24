@@ -121,8 +121,8 @@ sub rescan_vol {
     my @glob = glob("/sys/class/block/dm-*/slaves/sd?/device/wwid");
 
     foreach my $file (@glob) {
-        open my $fh, "<", $file or die "unable to open wwid file\n";
-        my $line = <$fh> or die "unable to read wwid file\n";
+        open(my $fh, "<", $file) or die "unable to open wwid file\n";
+        my $line = <$fh>;
         close $fh;
 
         next if $line !~ m/$volume_status->{wwid}/;

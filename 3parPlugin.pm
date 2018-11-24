@@ -125,7 +125,7 @@ sub rescan_vol {
         my $line = <$fh> or die "unable to read wwid file\n";
         close $fh;
 
-        next if $line !=~ m/$volume_status->{wwid}/;
+        next if $line !~ m/$volume_status->{wwid}/;
         next if $file !~  m#(/sys/class/block/dm-\d+/slaves/sd\w/device)/wwid#;
 
         open(my $output, ">", "$1/rescan") or die "unable to open SCSI rescan file\n";

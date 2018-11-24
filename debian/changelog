@@ -1,3 +1,9 @@
+proxmox-3par (2.0-2) experimental; urgency=medium
+
+  * fix error introduced in major version 2
+
+ -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Thu, 25 Nov 2018 13:03:00 +0100
+
 proxmox-3par (2.0-1) experimental; urgency=medium
 
   * added resizing devices and maps on resize

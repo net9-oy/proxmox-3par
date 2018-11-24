@@ -294,7 +294,6 @@ sub list_images {
         return if $name !~ m/^vm-(\d+)-/;
         my $owner = $1;
         return if $size !~ m/^\d+$/;
-        return if $cluster ne $scfg->{cluster_identifier};
 
         my $volid = "$storeid:$name";
 
@@ -335,7 +334,7 @@ sub volume_resize {
     die "cannot shrink volume\n" if $size < $cur->{size};
 
     my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'growvv', '-f',
-        $scfg->{cluster_identifier} . "_" . $volname, $size - $cur->{size}];
+        $volname, $size - $cur->{size}];
 
     run_command($cmd, errmsg => "error resizing volume\n");
 
@@ -346,7 +345,7 @@ sub volume_resize {
 sub volume_snapshot {
     my ($class, $scfg, $storeid, $volname, $snap) = @_;
 
-    my $vv = $scfg->{cluster_identifier} . "_" . $volname;
+    my $vv = $volname;
     my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'createsv', '-ro'];
     push @$cmd, '-exp', $scfg->{snapshot_expiry} if $scfg->{snapshot_expiry};
     push @$cmd, "${vv}_{$snap}", $vv;

@@ -1,9 +1,14 @@
 proxmox-3par (2.0-4) experimental; urgency=medium
 
+  * fix old cluster indentifier clauses
+
+ -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Thu, 25 Nov 2018 13:13:00 +0100
+
+proxmox-3par (2.0-4) experimental; urgency=medium
+
   * fix package declaration
 
  -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Thu, 25 Nov 2018 13:11:00 +0100
-
 
 proxmox-3par (2.0-3) experimental; urgency=medium
 

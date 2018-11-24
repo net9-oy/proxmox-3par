@@ -1,3 +1,10 @@
+proxmox-3par (2.0-4) experimental; urgency=medium
+
+  * fix package declaration
+
+ -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Thu, 25 Nov 2018 13:11:00 +0100
+
+
 proxmox-3par (2.0-3) experimental; urgency=medium
 
   * fix another error introduced in major version 2

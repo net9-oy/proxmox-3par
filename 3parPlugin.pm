@@ -1,4 +1,4 @@
-package PVE::Storage::3parPlugin;
+package PVE::Storage::Custom::3parPlugin;
 
 use strict;
 use warnings;

@@ -264,13 +264,12 @@ sub alloc_image {
 }
 
 sub free_image {
-    my ($class, $storeid, $scfg, $volname, $isBase, $snapname) = @_;
+    my ($class, $storeid, $scfg, $volname, $isBase) = @_;
 
     $class->deactivate_volume($storeid, $scfg, $volname)
-        if $class->volume_status($scfg, $class->volume_name($volname, $snapname));
+        if $class->volume_status($scfg, $volname);
 
-    my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'removevv', '-f',
-        $class->volume_name($volname, $snapname)];
+    my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'removevv', '-f', $volname];
 
     run_command($cmd, errmsg => "unable to remove virtual volume\n");
 }
@@ -361,7 +360,10 @@ sub volume_snapshot_rollback {
 sub volume_snapshot_delete {
     my ($class, $scfg, $storeid, $volname, $snap) = @_;
 
-    $class->free_image($storeid, $scfg, $volname, undef, $snap);
+    die "no snapname given (cowardly refusing to delete base volume from snapshot delete command)\n"
+        if !$snap;
+
+    $class->free_image($storeid, $scfg, $class->volume_name($volname, $snap), undef);
 }
 
 sub volume_export_formats {

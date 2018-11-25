@@ -1,3 +1,9 @@
+proxmox-3par (2.0-7) experimental; urgency=medium
+
+  * fix free_image, parsing volname was done wrong
+
+ -- Teemu Grönqvist <teemu.gronqvist@net9.fi>  Thu, 25 Nov 2018 14:11:00 +0100
+
 proxmox-3par (2.0-6) experimental; urgency=medium
 
   * fix old cluster indentifier in volume listing

@@ -283,13 +283,9 @@ sub list_images {
 
     run_command($cmd, outfunc => sub {
         my $line = shift;
-        my (undef, $identifier, undef, undef, undef, undef, undef, undef, undef, undef, undef, $size) = split ' ', $line;
+        my (undef, $name, undef, undef, undef, undef, undef, undef, undef, undef, undef, $size) = split ' ', $line;
 
-        return if !$identifier || !$size;
-
-        my ($cluster, $name) = split '_', $identifier;
-
-        return if !$name || !$cluster;
+        return if !$name || !$size;
 
         return if $name !~ m/^vm-(\d+)-/;
         my $owner = $1;

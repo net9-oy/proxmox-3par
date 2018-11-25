@@ -6,6 +6,7 @@ use IO::File;
 use Net::IP;
 use File::Path;
 use File::Basename;
+use Sys::Hostname;
 use PVE::Tools qw(run_command);
 use PVE::ProcFSTools;
 use PVE::Storage::Plugin;
@@ -48,10 +49,6 @@ sub properties {
             description => "Expiry of snapshots in 3par specified unit format",
             type => 'string',
         },
-        host => {
-            description => "Hostname of this in the 3par host definition",
-            type => 'string',
-        },
         startvlun => {
             description => "VLUN numbering starting value",
             type => 'integer',
@@ -77,7 +74,6 @@ sub options {
         user               => { fixed    => 1 },
         address            => { fixed    => 1 },
         snapshot_expiry    => { optional => 1 },
-        host               => { fixed    => 1 },
         startvlun          => { fixed    => 1 },
         use_dedup          => { fixed    => 1 },
         use_thin           => { fixed    => 1 },
@@ -99,7 +95,7 @@ sub volume_status {
         return if !$vv || !$lun || !$host || !$wwid;
         return if $lun !~ m/\d+/;
 
-        $correct = { 'vv' => $vv, 'lun' => $lun, 'wwid' => $wwid } if $host eq $scfg->{host};
+        $correct = { 'vv' => $vv, 'lun' => $lun, 'wwid' => $wwid } if $host eq hostname();
     });
 
     return $correct;
@@ -186,7 +182,7 @@ sub activate_volume {
     my ($class, $storeid, $scfg, $volname, $snapname, $cache) = @_;
 
     my $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'createvlun', '-novcn', '-f',
-        $class->volume_name($volname, $snapname), $scfg->{startvlun} . "+", $scfg->{host}];
+        $class->volume_name($volname, $snapname), $scfg->{startvlun} . "+", hostname()];
     my $volume_status = $class->volume_status($scfg, $class->volume_name($volname, $snapname));
 
     run_command($cmd, errmsg => "failure creating vlun\n")
@@ -239,7 +235,7 @@ sub deactivate_volume {
     }
 
     $cmd = ['/usr/bin/ssh', $scfg->{user} . '@' . $scfg->{address}, 'removevlun', '-f',
-        $class->volume_name($volname, $snapname), $volume_status->{lun}, $scfg->{host}];
+        $class->volume_name($volname, $snapname), $volume_status->{lun}, hostname()];
 
     run_command($cmd, errmsg => "unable to remove virtual lun\n");
 }

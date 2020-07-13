@@ -42,6 +42,21 @@ RSA key fingerprint is 8c:f9:46:5e:40:65:b4:91:be:41:a0:25:ef:7f:80:5f.
 Are you sure you want to continue connecting (yes/no)? yes
 ```
 
+### Storage Configuration Example
+
+```
+drbd: ThreeParStorage
+        address 192.168.1.1
+        cpg Proxmox_r6
+        startvlun 5
+        use_compr 0
+        use_dedup 0
+        use_thin 1
+        user proxmox
+        snapshot_expiry 30d
+        vname_prefix prx-
+```
+
 ## This is work in progress
 
 All functionality has not yet been implemented. Use with caution

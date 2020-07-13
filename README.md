@@ -24,6 +24,8 @@ cli% showuser
      proxmox     all    edit   N
 ```
 
+Add a public key to the storage.
+
 ```
 cat /etc/pve/priv/3par/192.168.1.1_id_rsa.pub
 ssh proxmox@192.168.1.1
@@ -36,7 +38,7 @@ cli% setsshkey
 Test HPE 3par connection:
 
 ```
-ssh -i /etc/pve/priv/zfs/192.168.1.1_id_rsa proxmox@192.168.1.1
+ssh -i /etc/pve/priv/3par/192.168.1.1_id_rsa proxmox@192.168.1.1
 The authenticity of host '192.168.1.1 (192.168.1.1)' can't be established.
 RSA key fingerprint is 8c:f9:46:5e:40:65:b4:91:be:41:a0:25:ef:7f:80:5f.
 Are you sure you want to continue connecting (yes/no)? yes

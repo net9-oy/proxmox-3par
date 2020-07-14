@@ -384,10 +384,13 @@ sub volume_snapshot_rollback {
 
     run_command($cmd, errmsg => "unable to rollback snapshot\n", outfunc => sub {
         my $line = shift;
-        my ($task, $taskid) = split ' ', $line;
+        my (undef, $taskid) = split ' ', $line;
 
-	$cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'waittask', $taskid] if $taskid;
-        run_command($cmd, errmsg => "unable to wait for rollback to snapshot\n");
+	if ($taskid)
+	{
+		$cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'waittask', $taskid] if $taskid;
+	        run_command($cmd, errmsg => "unable to wait for rollback to snapshot\n");
+	}
     });
 }
 

@@ -102,6 +102,7 @@ sub volume_status {
 
         return if !$vv || !$lun || !$host || !$wwid;
         return if $lun !~ m/\d+/;
+        return if $vv ne $name;
 
         $correct = { 'vv' => $vv, 'lun' => $lun, 'wwid' => $wwid } if $host eq hostname();
     });

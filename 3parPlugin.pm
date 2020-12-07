@@ -223,7 +223,11 @@ sub deactivate_volume {
 
     my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
 
-    die "vlun for $volname not found. please perform cleanup manually\n" if !$volume_status;
+    if ( !$volume_status ) {
+        print "vlun for $volname not found. please perform cleanup manually\n";
+        return -1;
+        #die "vlun for $volname not found. please perform cleanup manually\n" if !$volume_status;
+    }
 
     my @glob = glob("/sys/class/scsi_disk/*/device/wwid");
     my $files = [];

@@ -11,6 +11,7 @@ use PVE::Tools qw(run_command);
 use PVE::ProcFSTools;
 use PVE::Storage::Plugin;
 use PVE::JSONSchema qw(get_standard_option);
+use Time::HiRes qw(usleep nanosleep);
 use POSIX;
 
 use base qw(PVE::Storage::Plugin);
@@ -18,7 +19,7 @@ use base qw(PVE::Storage::Plugin);
 my $id_rsa_path = '/etc/pve/priv/3par/';
 
 sub api {
-    return 5;
+    return 8;
 }
 
 sub type {
@@ -168,10 +169,21 @@ sub filesystem_path {
     my ($class, $scfg, $volname, $snapname) = @_;
     my ($vtype, $name, $vmid) = $class->parse_volname($volname);
 
-    $class->activate_volume(undef, $scfg, $volname, $snapname);
 
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
-    my $path = "/dev/mapper/3" . lc $volume_status->{wwid} if $volume_status;
+    my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'showvv', '-showcols', 'Name,VV_WWN', $class->volume_name($scfg->{vname_prefix},$volname, $snapname)];
+    my $correct_wwn = undef;
+
+    run_command($cmd, errmsg => "unable to read wwn information from 3par\n", outfunc => sub {
+        my $line = shift;
+        my ($vv_name, $wwn) = split ' ', $line;
+
+        return if !$vv_name || !$wwn;
+        return if $vv_name ne $class->volume_name($scfg->{vname_prefix},$volname, $snapname);
+
+        $correct_wwn = lc $wwn if $vv_name eq $class->volume_name($scfg->{vname_prefix},$volname, $snapname);
+    });
+
+    my $path = "/dev/mapper/3" . $correct_wwn;
 
     return wantarray ? ($path, $vmid, $vtype) : $path;
 }
@@ -195,16 +207,28 @@ sub activate_storage {
 sub activate_volume {
     my ($class, $storeid, $scfg, $volname, $snapname, $cache) = @_;
 
+    print "Activate volume " . $volname . "\n";
+
+    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
+    if ( $volume_status ) {
+        print "Lun has already been created and activated \n";
+        return;
+    }
+
     my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'createvlun', '-novcn', '-f',
         $class->volume_name($scfg->{vname_prefix},$volname, $snapname), $scfg->{startvlun} . "+", hostname()];
-    my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
+    $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
 
     run_command($cmd, errmsg => "failure creating vlun\n")
         if !$volume_status;
 
     $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
 
+    my $dev_filename = "/dev/mapper/3" . lc $volume_status->{wwid};
+
     my @glob = glob("/sys/class/scsi_host/host*/scan");
+
+    print "Scanning multipath wwn " . lc $volume_status->{wwid} . "...\n";
 
     foreach my $file (@glob) {
         $file = $1 if $file =~ m/^(.+)$/;
@@ -213,9 +237,15 @@ sub activate_volume {
         close $fh;
     }
 
-    $cmd = ['/sbin/multipath', '-r', "3" . lc $volume_status->{wwid}];
+    my $time = 10;
+    while ( $time > 0 ) {
+       last if -e $dev_filename;
+       print "Wait " . $time . " seconds...\n";
+       sleep 1;
+       $time -= 1;
+    }
 
-    run_command($cmd, errmsg => "failure scanning for multipath devices\n");
+   die "failure scanning for multipath devices" unless -e $dev_filename;
 }
 
 sub deactivate_volume {
@@ -240,7 +270,9 @@ sub deactivate_volume {
         close $fh;
     }
 
-    my $cmd = ['/sbin/multipath', '-f', "3" . lc $volume_status->{wwid}];
+    my $cmd = ['/sbin/multipath',  '-R' , '10', '-f', "3" . lc $volume_status->{wwid}];
+
+    print "Deactivate multipath wwn 3" . lc $volume_status->{wwid} . "\n";
 
     run_command($cmd, errmsg => "unable to remove volume from multipath\n");
 
@@ -250,6 +282,7 @@ sub deactivate_volume {
         open(my $fh, ">", $delete);
         print $fh "1" or die "unable to write to scsi delete file in sysfs $delete\n";
         close $fh;
+        #print "Destroy device " . $file . "\n";
     }
 
     $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'removevlun', '-f',

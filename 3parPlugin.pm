@@ -169,7 +169,6 @@ sub filesystem_path {
     my ($class, $scfg, $volname, $snapname) = @_;
     my ($vtype, $name, $vmid) = $class->parse_volname($volname);
 
-
     my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'showvv', '-showcols', 'Name,VV_WWN', $class->volume_name($scfg->{vname_prefix},$volname, $snapname)];
     my $correct_wwn = undef;
 
@@ -182,6 +181,10 @@ sub filesystem_path {
 
         $correct_wwn = lc $wwn if $vv_name eq $class->volume_name($scfg->{vname_prefix},$volname, $snapname);
     });
+
+    die "unable to get wwn device path\n" if !defined($correct_wwn);
+
+    $correct_wwn =~ m/^([a-f0-9]+)$/ or die "bad WWN " . $correct_wwn;
 
     my $path = "/dev/mapper/3" . $correct_wwn;
 
@@ -211,21 +214,20 @@ sub activate_volume {
 
     my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
     if ( $volume_status ) {
-        print "Lun has already been created and activated \n";
-        return;
-    }
-
-    my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'createvlun', '-novcn', '-f',
+        print "Lun has already been created and activated\n";
+    } else
+    {
+        my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'createvlun', '-novcn', '-f',
         $class->volume_name($scfg->{vname_prefix},$volname, $snapname), $scfg->{startvlun} . "+", hostname()];
-    $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
+        $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
 
-    run_command($cmd, errmsg => "failure creating vlun\n")
-        if !$volume_status;
+        run_command($cmd, errmsg => "failure creating vlun\n")
+            if !$volume_status;
 
-    $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
+        $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
 
+    }
     my $dev_filename = "/dev/mapper/3" . lc $volume_status->{wwid};
-
     my @glob = glob("/sys/class/scsi_host/host*/scan");
 
     print "Scanning multipath wwn " . lc $volume_status->{wwid} . "...\n";
@@ -254,9 +256,7 @@ sub deactivate_volume {
     my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname, $snapname));
 
     if ( !$volume_status ) {
-        print "vlun for $volname not found. please perform cleanup manually\n";
         return -1;
-        #die "vlun for $volname not found. please perform cleanup manually\n" if !$volume_status;
     }
 
     my @glob = glob("/sys/class/scsi_disk/*/device/wwid");
@@ -270,25 +270,29 @@ sub deactivate_volume {
         close $fh;
     }
 
-    my $cmd = ['/sbin/multipath',  '-R' , '10', '-f', "3" . lc $volume_status->{wwid}];
-
-    print "Deactivate multipath wwn 3" . lc $volume_status->{wwid} . "\n";
-
-    run_command($cmd, errmsg => "unable to remove volume from multipath\n");
-
     foreach my $file (@$files) {
         my $delete = "$1/delete" if $file =~ m/(\/sys\/class\/scsi_disk\/.+\/device)\/wwid/;
         die "no file found or malformed file\n" if !$delete;
         open(my $fh, ">", $delete);
         print $fh "1" or die "unable to write to scsi delete file in sysfs $delete\n";
         close $fh;
-        #print "Destroy device " . $file . "\n";
     }
 
-    $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'removevlun', '-f',
+    print "Unexporting volume " . $volname . " on 3par\n";
+
+    my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'removevlun', '-f',
         $class->volume_name($scfg->{vname_prefix},$volname, $snapname), $volume_status->{lun}, hostname()];
 
     run_command($cmd, errmsg => "unable to remove virtual lun\n");
+
+    $cmd = ['/sbin/multipath',  '-f', "3" . lc $volume_status->{wwid}];
+
+    print "Flush multipath wwn 3" . lc $volume_status->{wwid} . "\n";
+
+    sleep 2;
+
+    system ( '/sbin/multipath -f 3' . lc $volume_status->{wwid} );
+#    run_command($cmd, errmsg => "unable to remove volume from multipath\n");
 }
 
 sub alloc_image {

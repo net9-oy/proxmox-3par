@@ -124,7 +124,7 @@ sub rescan_vol {
     my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix}, $volname, $snapname))
         or return;
 
-    my @glob = glob("/sys/class/block/dm-*/slaves/sd?/device/wwid");
+    my @glob = glob("/sys/class/block/dm-*/slaves/sd*/device/wwid");
 
     foreach my $file (@glob) {
         open(my $fh, "<", $file) or die "unable to open wwid file\n";
@@ -134,11 +134,10 @@ sub rescan_vol {
         next if $line !~ m/$volume_status->{wwid}/i;
 
         $file = substr($file,0,-4) . "rescan";
-
-	my ($out_file) = $file =~ /(^\/sys\/class\/block\/dm-\d+\/slaves\/sd\w\/device\/rescan$)/;
-	if ( !$out_file ) {
-	    die "unable to check SCSI rescan file\n";
-	}
+        my ($out_file) = $file =~ /(^\/sys\/class\/block\/dm-\d+\/slaves\/sd\w+\/device\/rescan$)/;
+        if ( !$out_file ) {
+            die "unable to check SCSI rescan file\n";
+        }
         open(my $output, ">", $out_file) or die "unable to open SCSI rescan file\n";
         print $output  "1\n" or die "unable to write to SCSI rescan file\n";
         close $output;
@@ -384,10 +383,9 @@ sub status {
 
 sub volume_resize {
     my ($class, $scfg, $storeid, $volname, $size, $running) = @_;
-
     my $disks = $class->list_images($storeid, $scfg);
-
     my $volid = "$storeid:$volname";
+
     foreach my $cur ( @$disks )
     {
 	if ($cur->{volid} eq $volid)

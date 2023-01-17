@@ -19,7 +19,7 @@ use base qw(PVE::Storage::Plugin);
 my $id_rsa_path = '/etc/pve/priv/3par/';
 
 sub api {
-    return 8;
+    return 10;
 }
 
 sub type {
@@ -102,12 +102,13 @@ sub volume_status {
         my ($vv, $lun, $host, $wwid) = split ' ', $line;
 
         return if !$vv || !$lun || !$host || !$wwid;
-        return if $lun !~ m/\d+/;
         return if $vv ne $name;
+	($lun) = ($lun =~ /^(\d+)$/) or die "lun '$lun' not an integer\n"; # untaint
+	$lun = int($lun);
 
         $correct = { 'vv' => $vv, 'lun' => $lun, 'wwid' => $wwid } if $host eq hostname();
+        #print "Volume status " . $vv . " lun " . $lun . " WWID " . $wwid . "\n";
     });
-
     return $correct;
 }
 
@@ -183,8 +184,7 @@ sub filesystem_path {
 
     die "unable to get wwn device path\n" if !defined($correct_wwn);
 
-    $correct_wwn =~ m/^([a-f0-9]+)$/ or die "bad WWN " . $correct_wwn;
-
+    ( $correct_wwn ) = ($correct_wwn =~ m/^([a-f0-9]+)$/) or die "bad WWN " . $correct_wwn; # untaint
     my $path = "/dev/mapper/3" . $correct_wwn;
 
     return wantarray ? ($path, $vmid, $vtype) : $path;
@@ -247,6 +247,7 @@ sub activate_volume {
     }
 
    die "failure scanning for multipath devices" unless -e $dev_filename;
+   print "Scan completed successfully\n";
 }
 
 sub deactivate_volume {
@@ -265,7 +266,9 @@ sub deactivate_volume {
         $file = $1 if $file =~ m/^(.+)$/;
         open(my $fh, "<", $file) or die "unable to open wwid file $file\n";
         my $line = <$fh>;
-        push @$files, $file if (index(lc $line, lc $volume_status->{wwid}) != -1);
+        if ( defined $line ) {
+            push @$files, $file if (index(lc $line, lc $volume_status->{wwid}) != -1);
+        }
         close $fh;
     }
 
@@ -283,15 +286,6 @@ sub deactivate_volume {
         $class->volume_name($scfg->{vname_prefix},$volname, $snapname), $volume_status->{lun}, hostname()];
 
     run_command($cmd, errmsg => "unable to remove virtual lun\n");
-
-    $cmd = ['/sbin/multipath',  '-f', "3" . lc $volume_status->{wwid}];
-
-    print "Flush multipath wwn 3" . lc $volume_status->{wwid} . "\n";
-
-    sleep 2;
-
-    system ( '/sbin/multipath -f 3' . lc $volume_status->{wwid} );
-#    run_command($cmd, errmsg => "unable to remove volume from multipath\n");
 }
 
 sub alloc_image {

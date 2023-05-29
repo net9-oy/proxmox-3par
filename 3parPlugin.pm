@@ -146,12 +146,16 @@ sub rescan_vol {
 }
 
 sub resize_map {
+    my $correct_wwn = undef;
+
     my ($class, $scfg, $volname) = @_;
 
     my $volume_status = $class->volume_status($scfg, $class->volume_name($scfg->{vname_prefix},$volname))
         or die "volume is not activated; unable to resize map\n";
 
-    run_command(['multipathd', 'resize', 'map', lc "3$volume_status->{wwid}"],
+   ( $correct_wwn ) = ( $volume_status->{wwid} =~ m/^([A-F0-9]+)$/) or die "bad WWN " . $volume_status->{wwid}; # untaint
+
+    run_command(['multipathd', 'resize', 'map', lc "3$correct_wwn"],
         errmsg => "unable to resize multipath map\n");
 }
 
@@ -339,9 +343,8 @@ sub list_images {
 
         return if $name !~ m/^$scfg->{vname_prefix}vm-(\d+)-/;
         my $owner = $1;
-        return if $size !~ m/^\d+$/;
-
-	$name =~ s/^$scfg->{vname_prefix}//;
+        $name =~ s/^$scfg->{vname_prefix}//;
+        ($size) = ($size =~ /^(\d+)$/) or die "size '$size' not an integer for volume " . $name . " \n"; # untaint
         my $volid = "$storeid:$name";
 
 
@@ -385,6 +388,7 @@ sub volume_resize {
 	if ($cur->{volid} eq $volid)
 	{
 	    die "cannot shrink volume\n" if $size < $cur->{size};
+	    ($size) = ($size =~ /^(\d+)$/) or die "size '$size' not an integer\n"; # untaint
 	    my $cmd = ['/usr/bin/ssh','-i', $id_rsa_path . $scfg->{address}.'_id_rsa', $scfg->{user} . '@' . $scfg->{address}, 'growvv', '-f',
 	    $class->volume_name($scfg->{vname_prefix},$volname), ($size - $cur->{size})/1073741824 . 'G'];
 	    run_command($cmd, errmsg => "error resizing volume\n");

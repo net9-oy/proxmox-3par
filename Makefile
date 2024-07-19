@@ -9,7 +9,7 @@ all:
 
 deb:
 	dh_clean
-	debuild -us -uc -i -b
+	debuild --no-lintian -i -us -uc -b
 
 install:
 	install -D -m 0644 ./DRBDPlugin.pm.divert ${DESTDIR}$(PERLDIR)/PVE/Storage/DRBDPlugin.pm

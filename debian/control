@@ -3,7 +3,7 @@ Maintainer: Net9 Oy <admin@net9.fi>
 Uploaders: Teemu Grönqvist <teemu.gronqvist@net9.fi>
 Section: perl
 Priority: optional
-Build-Depends: debhelper (>= 9)
+Build-Depends: debhelper-compat (= 13)
 Standards-Version: 3.9.6
 
 Package: proxmox-3par

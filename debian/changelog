@@ -1,3 +1,30 @@
+proxmox-3par (2.0-9) experimental; urgency=medium
+
+  [ root ]
+  * [5f1addf] New init
+
+  [ DaniilHarun ]
+  * [5589e7b] Update README.md
+  * [4217dde] Update README.md
+  * [73802d6] Update README.md
+
+  [ root ]
+  * [d8a9a1f] Fix volume_snapshot_rollback
+
+  [ Daniil Kharun ]
+  * [560e528] fix volume status
+  * [6974b07] Fix deactivate_volume
+  * [c04c9ae] multiple fixes
+  * [2c5366c] untainted variable WWN
+  * [439413e] Fix resize
+  * [6e48972] Untainted variables and change API version
+  * [4933b8c] Fix again untainted variables
+
+  [ Teemu Grönqvist ]
+  * [555aa17] Add automatic packaging
+
+ -- Net9 Oy <admin@net9.fi>  Fri, 19 Jul 2024 07:24:37 +0000
+
 proxmox-3par (2.0-8) experimental; urgency=medium
 
   * remove the hostname parameter and use host hostname instead
